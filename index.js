@@ -10,12 +10,15 @@ const bodyParser = require("body-parser"); //他的作用是把前端传过来�
 const baseUrl = "baseUrl";
 const multipart = require("connect-multiparty");
 const fs = require("fs"); //解析post请求的参数  可以获取到参数  也可以获取到文件
+const { default: mongoose } = require("mongoose");
 const multipartyMiddleware = multipart(); //解析post请求的参数  可以获取到参数  也可以获取到文件
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); //拿到客户端发送的消息
 app.use("/public", express.static("./public/img"));
+
+mongoose.set("strictQuery", false)
 
 //注册
 app.post("/addUser", (req, res) => {

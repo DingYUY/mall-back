@@ -82,6 +82,7 @@ async function getMyGoods(req, res) {
   let { user_id } = req.body;
   let result = await allSchema.goodsAddSchema.find({
     user_id: user_id,
+    show:true
   });
   if (result.length > 0) {
     res.send({ code: 1, msg: "获取成功", data: result });
@@ -112,6 +113,18 @@ async function getGoodsById(req, res) {
   let result = await allSchema.goodsAddSchema.find({
     good_id: goods_id,
   });
+
+  console.log(result)
+  let userArr=[]
+  for(let i=0;i<result.length;i++){
+      let user=await allSchema.userAddSchema.find({_id:result[i].user_id})
+      userArr.push(...user)
+      result[i].user_img=userArr[i].img_head
+
+  }
+
+
+
 
   if (result.length > 0) {
     res.send({ code: 1, msg: "获取成功", data: result });
@@ -200,12 +213,31 @@ async function getOrder(req, res) {
 
 //获取商品 分页查询
 async function getGoodsSkip(req, res) {
-  let { page, limit } = req.body;
-  let result = await allSchema.goodsAddSchema
-    .find()
-    .skip((page - 1) * limit)
-    .limit(limit * 1);
-  res.send({ code: 1, msg: "获取成功", data: result });
+  // let { page, limit } = req.body;
+  // let result = await allSchema.goodsAddSchema
+  //   .find({show:true})
+  //   .skip((page - 1) * limit)
+  //   .limit(limit * 1);
+  // res.send({ code: 1, msg: "获取成功", data: result });
+
+  let {page,limit}=req.body;
+  //只获取show为true的商品
+  let result=await allSchema.goodsAddSchema.find({show:true}).skip((page-1)*limit).limit(limit*1)
+
+  //拿到里面user_id获取最新的用户信息
+  let userArr=[]
+  for(let i=0;i<result.length;i++){
+      let user=await allSchema.userAddSchema.find({_id:result[i].user_id})
+      userArr.push(...user)
+      result[i].user_img=userArr[i].img_head
+
+  }
+
+  console.log(userArr)
+
+
+  res.send({code:1,msg:'获取成功',data:result})
+
 }
 
 //购物车返回商品
@@ -213,42 +245,22 @@ async function getShopCart(req, res) {
   //前端返回一个对象数组 [{id:1,count:1},{id:2,count:2}]
   let { goods } = req.body;
   let result = [];
-  let resq = res;
-  goods.forEach((item, index) => {
-    allSchema.goodsAddSchema.find({ good_id: item.id }).then((res) => {
-      //将res中的对象提取出来
-      let {
-        name,
-        price,
-        introduce,
-        img,
-        good_id,
-        user_id,
-        username,
-        user_img,
-        address,
-        show,
-      } = res[0];
-      result.push({
-        name,
-        price,
-        introduce,
-        img,
-        good_id,
-        user_id,
-        username,
-        user_img,
-        address,
-        count: item.count,
-        show,
-      });
-      if (index === goods.length - 1) {
-        resq.send({ code: 1, msg: "获取成功", data: result });
+  //获取商品 通过id
+  for (let i = 0; i < goods.length; i++) {
+      let good = await allSchema.goodsAddSchema.find({ good_id: goods[i].id });
+      let goodRes={
+       ...good[0]. _doc,
+        count:goods[i].count
       }
-    });
-  });
-}
+      console.log(goodRes)
+      result.push(goodRes);
+  }
 
+  //返回商品
+  res.send({ code: 1, msg: "获取成功", data: result });
+
+
+}
 //创建管理员
 async function addAdmin(req, res) {
   let { name, password } = req.body;
