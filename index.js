@@ -13,12 +13,16 @@ const fs = require("fs"); //解析post请求的参数  可以获取到参数  �
 const { default: mongoose } = require("mongoose");
 const multipartyMiddleware = multipart(); //解析post请求的参数  可以获取到参数  也可以获取到文件
 
+const ws = require('nodejs-websocket') // websocket
+const hostName = '127.0.0.1'
+let users = {}
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); //拿到客户端发送的消息
 app.use("/public", express.static("./public/img"));
 
-mongoose.set("strictQuery", false)
+mongoose.set("strictQuery", false);
 
 //注册
 app.post("/addUser", (req, res) => {
@@ -146,16 +150,59 @@ app.post("/api/upload", multipartyMiddleware, (req, res) => {
   });
 });
 
-
 //设置头像
 app.post("/setUserHead", (req, res) => {
-    allFun.setUserHead(req, res);
-  });
+  allFun.setUserHead(req, res);
+});
 
+app.post("/getUserHead", (req, res) => {
+  allFun.getUserHead(req, res);
+});
 
-  app.post('/getUserHead',(req,res)=>{
-    allFun.getUserHead(req,res)
+app.post('/getHead', (req, res) => {
+  allFun.getHead(req, res)
+})
+
+app.post('/addChat', (req, res) => {
+  allFun.addChatContent(req, res)
+})
+
+app.post('/getChat', (req, res) => {
+  allFun.getChatContent(req, res)
+})
+
+let chatList = []
+
+// 实时通信
+function boardcast(obj) {
+  chatList.push(obj)
+  server.connections.forEach(connection => {
+    // console.log(connection)
+    console.log('chatList', chatList)
+    connection.sendText(JSON.stringify(chatList))
   })
+}
+
+const server = ws.createServer((connection) => {
+  console.log('new Connection...')
+  // 处理客户端发来的消息
+  connection.on('text', (data) => {
+    console.log('接收到的客户端信息:' + data)
+    // connection.sendText('服务器返回数据:' + data)
+    boardcast(JSON.parse(data))
+  })
+  // 监听关闭
+  connection.on('close', (code, reason) => {
+    console.log('Connection closed')
+    chatList = []
+  })
+  // 监听异常
+  connection.on('error', () => {
+    console.log('服务异常关闭')
+    chatList = []
+  })
+}).listen(3000)
+
 app.listen(3175, () => {
   console.log("服务器启动成功:http://127.0.0.1:3175");
 });

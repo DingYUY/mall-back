@@ -83,6 +83,8 @@ async function getMyGoods(req, res) {
   let result = await allSchema.goodsAddSchema.find({
     user_id: user_id,
     show:true
+  }).sort({
+    createdAt: -1
   });
   if (result.length > 0) {
     res.send({ code: 1, msg: "获取成功", data: result });
@@ -120,11 +122,7 @@ async function getGoodsById(req, res) {
       let user=await allSchema.userAddSchema.find({_id:result[i].user_id})
       userArr.push(...user)
       result[i].user_img=userArr[i].img_head
-
   }
-
-
-
 
   if (result.length > 0) {
     res.send({ code: 1, msg: "获取成功", data: result });
@@ -174,7 +172,7 @@ async function addOrder(req, res) {
     { $set: { show: false } }
   ); // 用id查找
 
-  res.send({ code: 1, msg: "添加成功" });
+  res.send({ code: 1, msg: "添加成功" , records: order});
 }
 
 //删除订单
@@ -197,12 +195,14 @@ async function editOrder(req, res) {
 //获取订单
 async function getOrder(req, res) {
   let { shop_id } = req.body;
-  console.log(shop_id);
+  // console.log(shop_id);
   let result = await allSchema.orderSchema.find({
     $or: [{ shop_id: shop_id }, { user_id: shop_id }],
+  }).sort({
+    createdAt: -1
   });
 
-  console.log(result);
+  // console.log(result);
 
   if (result.length > 0) {
     res.send({ code: 1, msg: "获取成功", data: result });
@@ -222,7 +222,7 @@ async function getGoodsSkip(req, res) {
 
   let {page,limit}=req.body;
   //只获取show为true的商品
-  let result=await allSchema.goodsAddSchema.find({show:true}).skip((page-1)*limit).limit(limit*1)
+  let result=await allSchema.goodsAddSchema.find({show:true}).skip((page-1)*limit).limit(limit*1).sort({createdAt: -1})
 
   //拿到里面user_id获取最新的用户信息
   let userArr=[]
@@ -233,7 +233,7 @@ async function getGoodsSkip(req, res) {
 
   }
 
-  console.log(userArr)
+  // console.log(userArr)
 
 
   res.send({code:1,msg:'获取成功',data:result})
@@ -358,14 +358,43 @@ async function setDefaultAddress(req, res) {
 //修改头像
 async function setUserHead(req,res){
     let {_id,head_img}=req.body
-    console.log(_id,head_img)
+    // console.log(_id,head_img)
 let result=await allSchema.userAddSchema.updateOne({_id:_id},{$set:{
     img_head:head_img}})
-    console.log(result)
+    // console.log(result)
 res.send({code:1,msg:'设置成功'})
 
 }
 
+// 根据id查询头像
+async function getHead(req, res) {
+  let { id } = req.body
+  // console.log(id)
+  let result = await allSchema.userAddSchema.findById({_id:id})
+  res.send({ code: 1, msg: '查询成功', data: result })
+}
+
+// 添加聊天内容
+async function addChatContent(req, res) {
+  let { content, current_id, shop_id, user_id, token } = req.body
+  console.log(req.body)
+  let result = await allSchema.allChatSchema.create({
+    content,
+    current_id,
+    user_id,
+    shop_id,
+    token
+  })
+  res.send({ code: 1, msg: '添加成功', data: result })
+  console.log(result)
+}
+
+// 查询聊天内容
+async function getChatContent(req, res) {
+  let { shop_id, user_id } = req.body
+  let result = await allSchema.allChatSchema.find({shop_id, user_id}).sort({createdTime: 1})
+  res.send({ code: 1, msg: '查询成功', data: result })
+}
 
 module.exports = {
   addUser, //添加用户 注册
@@ -390,5 +419,8 @@ module.exports = {
   getDefaultAddress, //获取自己的默认地址
   setDefaultAddress, //设置默认地址
   setUserHead,
-  getUserHead
+  getUserHead,
+  getHead,
+  addChatContent,
+  getChatContent
 };

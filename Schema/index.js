@@ -1,4 +1,19 @@
+/*
+ * @Author: 丁雨阳 dzyyyt@163.com
+ * @Date: 2023-01-18 09:58:24
+ * @LastEditors: 丁雨阳 dzyyyt@163.com
+ * @LastEditTime: 2023-02-08 16:18:26
+ * @Description: 
+ * 
+ * Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
+ */
 const db = require("../db/index.js");
+const moment = require('moment')
+
+
+function getDate() {
+  return moment().format('YYYY-MM-DD HH:mm:ss')
+}
 
 const goodsAddSchema = new db.Schema({
   name: String, //商品名字
@@ -11,12 +26,20 @@ const goodsAddSchema = new db.Schema({
   user_img: String, //用户头像
   address: String, //用户地址
   show: Boolean, //是否显示
+  createdAt: {
+    type: Date,
+    default: getDate()
+  }
 });
 
 const userAddSchema = new db.Schema({
   name: String,
   img_head: String,
   password: String,
+  createdAt: {
+    type: Date,
+    default: getDate()
+  }
 });
 
 const orderSchema = new db.Schema({
@@ -32,6 +55,10 @@ const orderSchema = new db.Schema({
   goods_id: String, //商品id
   custorm_address: String, //客户地址
   img: Array, //商品图片
+  createdAt: {
+    type: Date,
+    default: getDate()
+  }
 });
 
 const rootUserSchema = new db.Schema({
@@ -45,7 +72,23 @@ const allMapSchema = new db.Schema({
   address: String, //地址
   is_default: Boolean, //是否是默认地址
   token: String, //token
+  createdAt: {
+    type: Date,
+    default: getDate()
+  }
 });
+
+const allChatSchema = new db.Schema({
+  content: String, // 发送内容
+  shop_id: String, // 商家id
+  user_id: String, // 买家id
+  current_id: String, // 发送消息的人的id
+  token: String,
+  createdTime: {
+    type: Date,
+    default: getDate()
+  }
+})
 
 //导出多个模型
 module.exports = {
@@ -54,4 +97,5 @@ module.exports = {
   orderSchema: db.model("order", orderSchema),
   rootUserSchema: db.model("rootUser", rootUserSchema),
   allMapSchema: db.model("allMap", allMapSchema),
+  allChatSchema: db.model("chat", allChatSchema)
 };
