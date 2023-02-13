@@ -1,5 +1,5 @@
 # /usr/src/nodejs/hello-docker/Dockerfile
-FROM node:16.19
+FROM node:16
 
 # 在容器中创建一个目录
 RUN mkdir -p /usr/src/nodejs/
@@ -15,7 +15,7 @@ RUN npm i
 # 把当前目录下的所有文件拷贝到 Image 的 /usr/src/nodejs/ 目录下
 COPY . /usr/src/nodejs/
 
-
 EXPOSE 3000
 EXPOSE 3175
-CMD npm start
+
+CMD ["node", "index.js"]
