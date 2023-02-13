@@ -1,5 +1,5 @@
 # /usr/src/nodejs/hello-docker/Dockerfile
-FROM node:10.0
+FROM node:16.19
 
 # 在容器中创建一个目录
 RUN mkdir -p /usr/src/nodejs/
