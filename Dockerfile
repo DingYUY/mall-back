@@ -15,7 +15,6 @@ WORKDIR /usr/src/nodejs/
 # RUN cd /usr/src/app/
 RUN npm install
 
-
 EXPOSE 3000
 EXPOSE 3175
 
