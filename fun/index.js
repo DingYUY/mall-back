@@ -5,7 +5,7 @@ let allSchema = require("../Schema/index.js");
 let jwt = require("jsonwebtoken");
 
 async function addUser(req, res) {
-  let { name, img_head, password } = req.body;
+  let { name, img_head, password, isManager, studentId, studentName, idCard, status, phone } = req.body;
   let user = await allSchema.userAddSchema.find({ name });
   if (user.length > 0) {
     res.send({ code: 0, msg: "用户已存在" });
@@ -19,11 +19,60 @@ async function addUser(req, res) {
       img_head:
         "https://img0.baidu.com/it/u=1217304799,3113310756&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1673456400&t=9cc8f1082d24652f45ef5488435ca3e6",
       password: token,
+      isManager,
+      studentId,
+      studentName,
+      idCard,
+      status,
+      phone
     });
-    res.send({ code: 1, msg: "注册成功" });
+    res.send({ code: 1, msg: "注册成功,请等待管理员审核" });
   }
 }
 
+// 查询当前用户
+async function getCurrentUser(req, res) {
+  let { _id } = req.body
+  let result = await allSchema.userAddSchema.find({_id})
+  if (result && result[0]) {
+    result[0].password = jwt.decode(result[0].password, 'privateKey')
+  }
+  console.log(result[0])
+  res.send({ code: 1, msg: "查询成功", data: result })
+}
+
+// 修改用户信息
+async function updateCurrentUser(req, res) {
+  let { name, password } = req.body
+  let token = jwt.sign(password, 'privateKey')
+  let result = await allSchema.userAddSchema.updateOne({name}, {
+    $set: {
+      name,
+      password: token
+    }
+  })
+  res.send({ code: 1, msg: "修改成功", data: result })
+}
+
+// 管理员审核用户
+async function checkUser(req, res) {
+  let { status, id } = req.body
+  let result = await allSchema.userAddSchema.updateOne({ _id: id }, {$set: {
+    status
+  }})
+  res.send({ code: 1, msg: '操作成功', result})
+}
+
+// 审核商品
+async function checkGoods(req, res) {
+  let { reviewStatus, id } = req.body
+  let result = await allSchema.goodsAddSchema.updateOne({_id: id}, {
+    $set: {
+      reviewStatus
+    }
+  })
+  res.send({ code: 1, msg: "操作成功", data: result })
+}
 
 //获取头像
 async function getUserHead(req, res) {
@@ -55,10 +104,24 @@ async function login(req, res) {
   }
 }
 
+// 查询所有用户
+async function getAllUser(req, res) {
+  let { pageNum, pageSize } = req.body
+  let userList = await allSchema.userAddSchema.find()
+    // .skip(pageNum ? (Number.parseInt(pageNum) - 1) * 10 : 0)  // 跳过多少条
+    // .limit(Number.parseInt(pageSize))
+    .sort({createdAt: -1})
+  if (userList) {
+    res.send({ code: 1, msg: "查询成功", data: userList })
+  } else {
+    res.send({ code: -1, msg: "当前无普通用户" })
+  }
+}
+
 //添加商品
 async function addGoods(req, res) {
-  let { name, price, introduce, img, good_id, user_id, username, address } =
-    req.body;
+  console.log(req.body)
+  let { name, price, introduce, img, good_id, user_id, username, address, reviewStatus } = req.body;
   //通过user_id查找头像
   let user = await allSchema.userAddSchema.find({ _id: user_id });
   let goods = await allSchema.goodsAddSchema.create({
@@ -72,9 +135,14 @@ async function addGoods(req, res) {
     user_img: user[0].img_head,
     address,
     show: true,
+    reviewStatus,
+    // count,
+    studentName: user[0].studentName,
+    studentId: user[0].studentId,
+    shop_phone: user[0].phone
   });
 
-  res.send({ code: 1, msg: "添加成功" });
+  res.send({ code: 1, msg: "添加成功", data: goods });
 }
 
 //查看自己发布的商品
@@ -93,20 +161,28 @@ async function getMyGoods(req, res) {
   }
 }
 
+// 查询所有商品
+async function getAllGoods(req, res) {
+  let result = await allSchema.goodsAddSchema.find().sort({createdAt: -1})
+  res.send({ code: 1, msg: "获取成功", data: result })
+}
+
 //编辑商品
 async function editGoods(req, res) {
-  let { name, price, id } = req.body;
-  let goods = await allSchema.goodsAddSchema.update(
+  let { name, price, introduce, img, user_id, username, address, reviewStatus, id } = req.body;
+  let goods = await allSchema.goodsAddSchema.updateOne(
     { _id: id },
-    { $set: { name, price } }
+    { $set: { name, price, introduce, img, user_id, username, address, reviewStatus } }
   ); // 用id查找
-  console.log(goods);
+  // console.log(goods);
+  res.send({ code: 1, msg: "编辑成功", data: goods })
 }
 
 //删除商品
 async function delGoods(req, res) {
   let { id } = req.body;
-  let goods = await allSchema.goodsAddSchema.deleteOne({ __id: id }); // 用id查找
+  let goods = await allSchema.goodsAddSchema.deleteOne({ _id: id }); // 用id查找
+  res.send({ code: 1, msg: '下架成功', data: goods })
 }
 
 //通过商品id获取商品
@@ -146,7 +222,11 @@ async function addOrder(req, res) {
     custorm_address, //客户地址
     img,
     user_id,
+    buy_count
   } = req.body;
+
+  let shop = await allSchema.userAddSchema.find({_id:shop_id})
+  console.log('shop', shop)
 
   let order = await allSchema.orderSchema.create({
     order_id:
@@ -164,13 +244,30 @@ async function addOrder(req, res) {
     custorm_address,
     img,
     user_id,
+    buy_count,
+    shop_phone: shop[0].phone
   });
 
   //删除商品 修改商品状态
-  let goods = await allSchema.goodsAddSchema.update(
-    { good_id: goods_id },
-    { $set: { show: false } }
-  ); // 用id查找
+  // let goods = await allSchema.goodsAddSchema.updateOne(
+  //   { good_id: goods_id },
+  //   { $set: { show: false } }
+  // ); // 用id查找
+  
+  // let goods = await allSchema.goodsAddSchema.find({goods_id})
+  // console.log(goods)
+  // let orderGoods = await allSchema.orderSchema.find({goods_id})
+  // console.log(orderGoods)
+  // let goodsCount = []
+  // orderGoods.forEach(item => {
+  //   goodsCount.push(item.buy_count)
+  // })
+  // let allCount = goodsCount.reduce((pre, cur) => {
+  //   return pre + cur
+  // }, 0)
+  // if (allCount === goods.count) {
+  //   await allSchema.goodsAddSchema.deleteOne({goods_id})
+  // }
 
   res.send({ code: 1, msg: "添加成功" , records: order});
 }
@@ -185,7 +282,7 @@ async function delOrder(req, res) {
 //修改订单状态
 async function editOrder(req, res) {
   let { _id, status } = req.body;
-  let result = await allSchema.orderSchema.update(
+  let result = await allSchema.orderSchema.updateOne(
     { _id: _id },
     { $set: { status: status } }
   );
@@ -209,6 +306,38 @@ async function getOrder(req, res) {
   } else {
     res.send({ code: 0, msg: "获取失败", data: result || [] });
   }
+}
+
+// 评价
+async function review(req, res) {
+  let { observerId, shop_id, comment, reviewScore, shop_name, order_id, observerName } = req.body
+  let result = await allSchema.commentsSchema.create({
+    observerId,
+    shop_id,
+    comment,
+    reviewScore,
+    shop_name,
+    order_id,
+    observerName
+  })
+  await allSchema.orderSchema.updateOne({order_id}, { $set: {
+    isComment: true
+  }})
+  res.send({ code: 1, msg: "评论成功", result })
+}
+
+// 获取单个订单评价
+async function getOrderComment(req, res) {
+  let { order_id } = req.body
+  let result = await allSchema.commentsSchema.find({order_id})
+  res.send({ code: 1, msg: "获取成功", data: result })
+}
+
+// 获取商家所有评价
+async function getComments(req, res) {
+  let { shop_id } = req.body
+  let result = await allSchema.commentsSchema.find({shop_id})
+  res.send({ code: 1, msg: "获取成功", data: result })
 }
 
 //获取商品 分页查询
@@ -275,6 +404,16 @@ async function delAdmin(req, res) {
   let result = await allSchema.rootUserSchema.deleteOne({ _id: id });
 }
 
+// 封禁用户
+async function banUser(req, res) {
+  let { name, id, isBan } = req.body
+  let result = await allSchema.userAddSchema.updateOne({ _id: id }, {
+    $set: {isBan}
+  })
+  let deleteUserGoods = await allSchema.goodsAddSchema.deleteMany({ user_id:id })
+  res.send({ code: 1, msg: '封禁成功', data:result, delete: deleteUserGoods })
+}
+
 //添加地址
 async function addAddress(req, res) {
   let { name, phone, address, is_default, token } = req.body;
@@ -312,7 +451,7 @@ async function getAddress(req, res) {
 //修改地址
 async function editAddress(req, res) {
   let { _id, name, phone, address, is_default } = req.body;
-  let result = await allSchema.allMapSchema.update(
+  let result = await allSchema.allMapSchema.updateOne(
     { _id: _id },
     {
       $set: {
@@ -422,5 +561,15 @@ module.exports = {
   getUserHead,
   getHead,
   addChatContent,
-  getChatContent
+  getChatContent,
+  getAllUser,
+  banUser,
+  checkUser,
+  review,
+  getComments,
+  getOrderComment,
+  getAllGoods,
+  checkGoods,
+  getCurrentUser,
+  updateCurrentUser
 };

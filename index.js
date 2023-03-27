@@ -6,7 +6,7 @@ let allSchema = require("./Schema/index.js");
 const cors = require("cors");
 let jwt = require("jsonwebtoken");
 const allFun = require("./fun");
-const bodyParser = require("body-parser"); //他的作用是把前端传过来的数据转换成对象
+const bodyParser = require("body-parser"); //把前端传过来的数据转换成对象
 const baseUrl = "baseUrl";
 const multipart = require("connect-multiparty");
 const fs = require("fs"); //解析post请求的参数  可以获取到参数  也可以获取到文件
@@ -16,10 +16,13 @@ const multipartyMiddleware = multipart(); //解析post请求的参数  可以获
 const ws = require('nodejs-websocket') // websocket
 const hostName = '127.0.0.1'
 let users = {}
+let path=require('path')
+
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); //拿到客户端发送的消息
+// app.use("/public", express.static(path.join(__dirname, './public/img')));
 app.use("/public", express.static("./public/img"));
 
 mongoose.set("strictQuery", false);
@@ -118,10 +121,25 @@ app.post("/setDefaultAddress", (req, res) => {
   allFun.setDefaultAddress(req, res);
 });
 
+// 创建管理员
+app.post("/addManager", (req, res) => {
+  allFun.addAdmin(req, res)
+})
+
+// 获取所有用户
+app.post("/getAllUser", (req, res) => {
+  allFun.getAllUser(req, res)
+})
+
+// 封禁用户
+app.post("/ban", (req, res) => {
+  allFun.banUser(req, res)
+})
+
 //上传图片
 app.post("/api/upload", multipartyMiddleware, (req, res) => {
   //获取图片
-  console.log(req.files.file.size);
+  console.log(req.files.file);
   let fs = require("fs");
   let year = new Date().getFullYear();
   let month = new Date().getMonth() + 1;
@@ -132,13 +150,15 @@ app.post("/api/upload", multipartyMiddleware, (req, res) => {
   let hour = new Date().getHours();
   fs.readFile(req.files.file.path, (err, data) => {
     fs.writeFile(
-      "./public/img/" + year + month + day + size + hour + ".jpg",
+      './public/img/' + year + month + day + size + hour + ".jpg",
       data,
       (err) => {
         if (err) {
           console.log(err);
           return;
         }
+
+        // console.log(path.join(__dirname, './public/img/'))
       }
     );
     //返回图片的地址
@@ -171,10 +191,43 @@ app.post('/getChat', (req, res) => {
   allFun.getChatContent(req, res)
 })
 
+app.post('/checkUser', (req, res) => {
+  allFun.checkUser(req, res)
+})
+
+app.post('/review', (req, res) => {
+  allFun.review(req, res)
+})
+
+app.post('/getComments', (req, res) => {
+  allFun.getComments(req, res)
+})
+
+app.post('/getOrderComment', (req, res) => {
+  allFun.getOrderComment(req, res)
+})
+
+app.post('/getAllGoods', (req, res) => {
+  allFun.getAllGoods(req, res)
+})
+
+app.post('/checkGoods', (req, res) => {
+  allFun.checkGoods(req, res)
+})
+
+app.post('/getCurrentUser', (req, res) => {
+  allFun.getCurrentUser(req, res)
+})
+
+app.post('/updateCurrentUser', (req, res) => {
+  allFun.updateCurrentUser(req, res)
+})
+
 let chatList = []
 
 // 实时通信
 function boardcast(obj) {
+  chatList = []
   chatList.push(obj)
   server.connections.forEach(connection => {
     // console.log(connection)
